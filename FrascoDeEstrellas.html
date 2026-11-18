@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070b24">
+<title>Frasco de Estrellas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&family=Quicksand:wght@500;600;700&display=swap">
+<style>
+/* Layout: cielo nocturno a pantalla completa; título arriba, frasco al centro, contador y cupones abajo; tarjetas como capa encima */
+:root{
+  --sky:#070b24; --ink:#fff7ea; --dim:#cfc3e6; --gold:#ffd36b; --gold-deep:#ffb23f; --rose:#ff8fb1;
+  --card:#1a1440; --line:rgba(255,211,107,.5); --paper:#fff6e8; --paper-ink:#3a2230; --ticket:#ffe9a8; --ticket-ink:#4a2a10;
+  --f-title:"Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --f-script:"Great Vibes", "Segoe Script", "Brush Script MT", cursive;
+  --f-ui:"Quicksand", "Segoe UI", system-ui, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0; height:100%; overflow:hidden; background:var(--sky); color:var(--ink); font-family:var(--f-ui);
+  -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none}
+#bg,#fx{position:fixed; inset:0; width:100%; height:100%; display:block}
+#fx{pointer-events:none; z-index:30}
+.app{position:fixed; inset:0; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 18px); gap:10px}
+header{text-align:center}
+h1{margin:0; font-family:var(--f-title); font-weight:600; font-size:clamp(32px,9vw,56px); letter-spacing:.06em; line-height:1.05;
+  color:var(--gold); text-shadow:0 0 22px rgba(255,196,90,.35); text-wrap:balance}
+.sub{margin:.05em 0 0; font-family:var(--f-script); font-size:clamp(30px,8.5vw,50px); color:var(--rose); line-height:1.1; text-shadow:0 0 16px rgba(255,143,177,.45)}
+main{flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; width:100%}
+#jar{display:block; cursor:pointer; touch-action:manipulation; max-width:100%}
+.hint{margin:0; font-size:15px; color:var(--dim); text-align:center; min-height:1.4em; animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.55}}
+footer{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px 16px; width:100%; max-width:520px}
+.count{font-size:14px; color:var(--dim); letter-spacing:.03em; font-variant-numeric:tabular-nums}
+.count b{color:var(--gold); font-weight:700}
+.pill{font-family:var(--f-ui); font-weight:700; font-size:14px; color:var(--ticket-ink); background:linear-gradient(180deg,#ffe9a8,var(--gold-deep));
+  border:0; border-radius:999px; padding:11px 18px; cursor:pointer; box-shadow:0 6px 18px rgba(255,178,63,.3)}
+.pill:active,.btn:active{transform:translateY(2px)}
+button:focus-visible{outline:3px solid #fff; outline-offset:3px}
+
+.veil{position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:16px; background:rgba(5,6,22,.72);
+  -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px)}
+.card{width:min(100%,400px); max-height:calc(100vh - 40px); overflow:auto; background:var(--paper); color:var(--paper-ink);
+  border-radius:22px; padding:26px 22px 20px; text-align:center; box-shadow:0 26px 70px rgba(0,0,0,.55);
+  animation:pop .55s cubic-bezier(.2,1.5,.4,1); display:grid; gap:14px}
+@keyframes pop{from{opacity:0; transform:scale(.6) rotate(-4deg)} to{opacity:1; transform:none}}
+.kick{font-size:12px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:#b8325f}
+.reason{margin:0; font-family:var(--f-title); font-style:italic; font-weight:500; font-size:clamp(25px,6.6vw,30px); line-height:1.35; text-wrap:pretty}
+.sign{margin:0; font-family:var(--f-script); font-size:30px; color:#b8325f}
+.btn{justify-self:center; font-family:var(--f-ui); font-weight:700; font-size:15px; letter-spacing:.04em; color:#fff;
+  background:linear-gradient(180deg,#ff8fb1,#d9467a); border:0; border-radius:999px; padding:13px 26px; cursor:pointer; box-shadow:0 6px 18px rgba(217,70,122,.35)}
+.ticket{position:relative; background:var(--ticket); color:var(--ticket-ink); border-radius:14px; padding:16px 16px 14px; border:2px dashed rgba(74,42,16,.35); display:grid; gap:10px}
+.ticket::before,.ticket::after{content:""; position:absolute; top:50%; width:22px; height:22px; margin-top:-11px; border-radius:50%; background:var(--paper)}
+.ticket::before{left:-13px} .ticket::after{right:-13px}
+.t-head{font-size:12px; font-weight:700; letter-spacing:.22em; text-transform:uppercase}
+.t-body{position:relative; min-height:120px; display:grid; place-items:center; border-radius:10px; overflow:hidden; background:#fff4d1}
+.t-text{margin:0; padding:16px 14px; font-family:var(--f-title); font-weight:600; font-size:clamp(23px,6vw,27px); line-height:1.3; text-wrap:balance}
+.scratch{position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:crosshair; transition:opacity .7s}
+.t-foot{font-size:12px; letter-spacing:.04em; opacity:.8}
+.small{margin:0; font-size:14px; color:#6b4a5a; line-height:1.45}
+.link{justify-self:center; background:none; border:0; color:#8a5a70; font-family:var(--f-ui); font-size:13px; text-decoration:underline; cursor:pointer; padding:4px}
+.wallet{width:min(100%,420px); max-height:calc(100vh - 40px); overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:22px;
+  padding:22px 18px 18px; display:grid; gap:12px; animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+.wallet h2{margin:0; text-align:center; font-family:var(--f-title); font-weight:600; font-size:30px; color:var(--gold)}
+.wallet .small{color:var(--dim); text-align:center}
+.mini{background:var(--ticket); color:var(--ticket-ink); border-radius:12px; padding:12px 14px; border:2px dashed rgba(74,42,16,.3);
+  font-family:var(--f-title); font-weight:600; font-size:20px; line-height:1.3}
+.mini span{display:block; font-family:var(--f-ui); font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; opacity:.7; margin-bottom:2px}
+.empty{text-align:center; color:var(--dim); font-size:15px; padding:14px 0}
+.fly{position:fixed; z-index:25; width:56px; height:56px; margin:-28px 0 0 -28px; pointer-events:none; filter:drop-shadow(0 0 12px rgba(255,230,150,.9))}
+@media (prefers-reduced-motion: reduce){ .hint{animation:none} .card,.wallet{animation:none} }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div class="app">
+  <header>
+    <h1>Frasco de Estrellas</h1>
+    <p class="sub">para Mi Stella</p>
+  </header>
+  <main>
+    <canvas id="jar" role="button" aria-label="Frasco de estrellas: toca para sacar una"></canvas>
+    <p class="hint" id="hint">Toca el frasco para sacar una estrella ✨</p>
+  </main>
+  <footer>
+    <span class="count" id="count"></span>
+    <button class="pill" id="walletBtn" type="button">🎟 Mis cupones (0)</button>
+  </footer>
+</div>
+
+<div class="veil" id="veil" hidden><div id="sheet"></div></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script>
+(() => {
+/* ============================================================
+   PERSONALIZA AQUÍ
+   ============================================================ */
+const ELLA = 'Nicole', EL = 'Victor';
+const RAZONES = [
+  'Por cómo te ríes, aunque el chiste sea malo.',
+  'Porque contigo puedo ser yo, sin miedo.',
+  'Porque empezamos queriendo juntar a otros y terminamos encontrándonos.',
+  'Por tus mensajes de buenos días.',
+  'Porque me haces querer ser mejor cada día.',
+  'Por la forma en que dices mi nombre.',
+  'Porque eres mi lugar seguro.',
+  'Porque volviste, y eso lo cambió todo.',
+  'Por tu paciencia conmigo.',
+  'Porque hasta en silencio me haces compañía.',
+  'Por tus abrazos, que arreglan días enteros.',
+  'Porque eres mi estrella. Mi Stella.',
+  'Porque cuando algo bueno me pasa, eres la primera persona a quien quiero contárselo.',
+  'Por lo bonita que te ves cuando no te das cuenta.',
+  'Porque me enseñaste que el amor también es aprender.',
+  'Por tu forma de cuidar a los que quieres.',
+  'Porque contigo los planes más simples se vuelven los mejores.',
+  'Por tu fuerza, aunque a veces tú no la veas.',
+  'Porque me entiendes con solo mirarme.',
+  'Porque eres mi persona favorita para no hacer nada.',
+  'Por tus ocurrencias.',
+  'Porque me haces reír incluso en los días grises.',
+  'Porque te elijo cada día, y lo volvería a hacer.',
+  'Por cómo te brillan los ojos cuando hablas de lo que te gusta.',
+  'Porque juntos somos mejor equipo.',
+  'Por la paz que siento cuando estás cerca.',
+  'Porque eres hermosa por dentro y por fuera.',
+  'Porque nos dimos otra oportunidad y la estamos cuidando.',
+  'Por tus besos.',
+  'Porque me apoyas en mis locuras.',
+  'Porque cada canción de amor ahora tiene tu cara.',
+  'Porque hasta tus enojos me parecen tiernos (casi siempre).',
+  'Por todo lo que hemos aprendido juntos.',
+  'Porque contigo el tiempo se pasa volando.',
+  'Por tu corazón tan grande.',
+  'Porque contigo me siento en casa.',
+  'Porque pienso en ti antes de dormir y al despertar.',
+  'Porque eres única. No hay otra como tú.',
+  'Porque me encanta escucharte hablar, de lo que sea.',
+  'Porque tu felicidad se volvió mi prioridad.',
+  'Por cómo me miras.',
+  'Porque todavía me haces sentir mariposas.',
+  'Porque quiero conocer todas tus versiones: la de hoy, la de mañana y la de dentro de muchos años.',
+  'Porque cuando sonríes, se me arregla el día.',
+  'Porque eres valiente.',
+  'Porque me haces creer en los finales felices.',
+  'Porque eres mi casualidad más bonita.',
+  'Porque somos más fuertes que nunca.',
+  'Porque eres la estrella que siempre me guía de vuelta a casa.',
+  'Porque te amo millones, y ni así me alcanzan las palabras.'
+];
+const CUPONES = [
+  'Vale por una cita sorpresa planeada por mí',
+  'Vale por un abrazo de 10 minutos sin soltarte',
+  'Vale por ganar una discusión, sin protestas',
+  'Vale por una cena que yo cocino',
+  'Vale por una noche de películas, y tú eliges todas',
+  'Vale por un masaje de 20 minutos',
+  'Vale por un helado cuando tú quieras',
+  'Vale por un día en que yo hago todo lo que tú digas',
+  'Vale por una carta escrita a mano',
+  'Vale por una salida a ver las estrellas',
+  'Vale por un beso donde y cuando quieras',
+  'Vale por un "sí" a lo que me pidas (dentro de lo razonable)'
+];
+
+/* ---------- utilidades ---------- */
+const $ = s => document.getElementById(s);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const COLORS = ['#ffd36b', '#ff9ec0', '#b8a4ff', '#8fd3ff', '#ffb38a', '#a8e6b5', '#fff1c9'];
+
+/* ---------- estado (se guarda en el teléfono) ---------- */
+const KEY = 'frascoStella.v1';
+function newDeck() {
+  const d = shuffle([...RAZONES.map((_, i) => 'r' + i), ...CUPONES.map((_, i) => 'c' + i)]);
+  for (let i = 0; i < d.length - 1; i++) if (d[i][0] === 'c' && d[i + 1][0] === 'c') { const j = d.findIndex((x, k) => k > i + 1 && x[0] === 'r'); if (j > 0) [d[i + 1], d[j]] = [d[j], d[i + 1]]; }
+  if (d[0][0] === 'c') { const j = d.findIndex(x => x[0] === 'r'); [d[0], d[j]] = [d[j], d[0]]; }
+  return d;
+}
+let state = null;
+try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+if (!state || !Array.isArray(state.deck) || state.deck.length !== RAZONES.length + CUPONES.length) state = { deck: newDeck(), pos: 0, coupons: [] };
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+const remaining = () => state.deck.length - state.pos;
+
+/* ---------- sonido ---------- */
+let AC = null;
+function audio() {
+  if (!AC) { const C = window.AudioContext || window.webkitAudioContext; if (C) try { AC = new C(); } catch (e) {} }
+  if (AC && AC.state !== 'running') AC.resume().catch(() => {});
+  return AC;
+}
+function tone(f, t, dur, vol, type) {
+  const o = AC.createOscillator(), g = AC.createGain(); o.type = type || 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .015); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
+  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + .05);
+}
+function chime(notes, gap) { const a = audio(); if (!a) return; const t = a.currentTime + .02; notes.forEach((m, i) => tone(440 * Math.pow(2, (m - 69) / 12), t + i * (gap || .08), 1.1, .07, 'triangle')); }
+
+/* ---------- cielo de fondo ---------- */
+const bg = $('bg'), bctx = bg.getContext('2d'), fx = $('fx'), fctx = fx.getContext('2d');
+let W = 0, H = 0, DPR = 1, sky = [];
+function sizeCanvas(c, x, w, h) { c.width = Math.round(w * DPR); c.height = Math.round(h * DPR); x.setTransform(DPR, 0, 0, DPR, 0, 0); }
+function drawStar(x, ctxx, cx, cy, r, rot, inner) {
+  x.beginPath();
+  for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * (inner || .5) : r; x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+  x.closePath();
+}
+function drawSky(t, dt) {
+  const g = bctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#050820'); g.addColorStop(.6, '#14113d'); g.addColorStop(1, '#2c1a4c');
+  bctx.fillStyle = g; bctx.fillRect(0, 0, W, H);
+  for (const s of sky) {
+    s.x -= s.sp * dt * (REDUCE ? .3 : 1); if (s.x < -4) { s.x = W + 4; s.y = rnd(0, H); }
+    const a = .5 + .5 * Math.sin(t * s.tw + s.ph); bctx.globalAlpha = .3 + .7 * a; bctx.fillStyle = s.c;
+    bctx.beginPath(); bctx.arc(s.x, s.y, s.r, 0, 6.283); bctx.fill();
+    if (s.r > 1.5 && a > .7) { bctx.globalAlpha = (a - .7) * 2.5; bctx.fillRect(s.x - s.r * 4, s.y - .5, s.r * 8, 1); bctx.fillRect(s.x - .5, s.y - s.r * 4, 1, s.r * 8); }
+  }
+  bctx.globalAlpha = 1;
+}
+
+/* ---------- frasco ---------- */
+const jar = $('jar'), jctx = jar.getContext('2d');
+let JW = 0, JH = 0, slots = [], sprites = {}, lidT0 = -9, clock = 0;
+function genSlots(n) {
+  const out = []; let minD = .1, tries = 0;
+  while (out.length < n) {
+    const p = { x: rnd(.17, .83), y: rnd(.38, 1.24) };
+    if (out.every(q => Math.hypot(q.x - p.x, q.y - p.y) > minD)) { p.rot = rnd(0, 6.28); p.c = COLORS[out.length % COLORS.length]; p.ph = rnd(0, 6.28); p.s = rnd(.85, 1.15); out.push(p); tries = 0; }
+    else if (++tries > 400) { minD *= .93; tries = 0; }
+  }
+  return out.sort((a, b) => b.y - a.y);
+}
+function makeSprites() {
+  sprites = {}; const r = JW * .052;
+  COLORS.concat(['#ffcf3a']).forEach(c => {
+    const size = Math.ceil(r * 3.4 * DPR), cv = document.createElement('canvas'); cv.width = cv.height = size;
+    const x = cv.getContext('2d'), m = size / 2, rr = r * DPR;
+    x.shadowColor = c; x.shadowBlur = rr * .9;
+    x.fillStyle = c; x.strokeStyle = c; x.lineWidth = rr * .4; x.lineJoin = 'round';
+    drawStar(x, null, m, m, rr, 0, .5); x.fill(); x.stroke();
+    x.shadowBlur = 0; x.globalAlpha = .55; x.fillStyle = '#ffffff';
+    drawStar(x, null, m - rr * .12, m - rr * .14, rr * .42, 0, .5); x.fill();
+    sprites[c] = cv;
+  });
+}
+function jarPath(x) {
+  const w = JW, h = JH;
+  x.beginPath(); x.moveTo(w * .31, h * .13); x.lineTo(w * .31, h * .19);
+  x.quadraticCurveTo(w * .08, h * .22, w * .08, h * .32); x.lineTo(w * .08, h * .9);
+  x.quadraticCurveTo(w * .08, h * .975, w * .17, h * .975); x.lineTo(w * .83, h * .975);
+  x.quadraticCurveTo(w * .92, h * .975, w * .92, h * .9); x.lineTo(w * .92, h * .32);
+  x.quadraticCurveTo(w * .92, h * .22, w * .69, h * .19); x.lineTo(w * .69, h * .13); x.closePath();
+}
+function slotXY(i) { const s = slots[i]; return { x: s.x * JW, y: s.y * JW }; }
+function drawJar(t) {
+  const x = jctx, w = JW, h = JH, rem = remaining();
+  x.clearRect(0, 0, w, h);
+  // resplandor
+  const glow = x.createRadialGradient(w / 2, h * .62, 0, w / 2, h * .62, w * .62);
+  glow.addColorStop(0, `rgba(255,214,120,${.1 + .22 * rem / state.deck.length + .04 * Math.sin(t * 1.5)})`); glow.addColorStop(1, 'rgba(255,214,120,0)');
+  x.fillStyle = glow; x.fillRect(0, 0, w, h);
+  // estrellas adentro
+  x.save(); jarPath(x); x.clip();
+  x.fillStyle = 'rgba(190,210,255,.07)'; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < rem && i < slots.length; i++) {
+    const s = slots[i], p = slotXY(i), spr = sprites[s.c], sz = spr.width / DPR * s.s;
+    const bob = REDUCE ? 0 : Math.sin(t * 1.3 + s.ph) * 1.4;
+    x.save(); x.translate(p.x, p.y + bob); x.rotate(s.rot + (REDUCE ? 0 : Math.sin(t * .6 + s.ph) * .08));
+    x.globalAlpha = .82 + .18 * Math.sin(t * 2 + s.ph); x.drawImage(spr, -sz / 2, -sz / 2, sz, sz); x.restore();
+  }
+  x.restore();
+  // vidrio
+  jarPath(x); x.lineWidth = 2.5; x.strokeStyle = 'rgba(235,240,255,.7)'; x.stroke();
+  let g = x.createLinearGradient(w * .11, 0, w * .2, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,255,255,.32)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(w * .11, h * .3, w * .09, h * .58);
+  x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(w * .82, h * .36, w * .025, h * .3);
+  x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(w * .31, h * .19, w * .38, h * .012);
+  // cordel
+  x.strokeStyle = '#d9a86c'; x.lineWidth = 2.2;
+  for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(w * .3, h * (.155 + k * .012)); x.lineTo(w * .7, h * (.15 + k * .012)); x.stroke(); }
+  // etiqueta
+  x.save(); x.translate(w * .72, h * .17); x.rotate(.22 + (REDUCE ? 0 : Math.sin(t * 1.2) * .05));
+  x.strokeStyle = '#d9a86c'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(0, 0); x.lineTo(w * .04, h * .05); x.stroke();
+  x.fillStyle = '#fff6e8'; x.beginPath(); if (x.roundRect) x.roundRect(w * .01, h * .05, w * .2, h * .07, 4); else x.rect(w * .01, h * .05, w * .2, h * .07); x.fill();
+  x.fillStyle = '#b8325f'; x.font = `${Math.round(w * .045)}px "Great Vibes", cursive`; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('Mi Stella', w * .11, h * .087); x.restore();
+  // tapa de corcho
+  const e = (t - lidT0) / 1.1, lift = e >= 0 && e <= 1 ? Math.sin(Math.PI * e) : 0;
+  x.save(); x.translate(w / 2, h * .13 - lift * h * .1); x.rotate(-lift * .35);
+  g = x.createLinearGradient(0, -h * .1, 0, 0); g.addColorStop(0, '#c48a52'); g.addColorStop(1, '#8f5a2e');
+  x.fillStyle = g; x.beginPath(); if (x.roundRect) x.roundRect(-w * .2, -h * .1, w * .4, h * .1, 6); else x.rect(-w * .2, -h * .1, w * .4, h * .1); x.fill();
+  x.fillStyle = 'rgba(70,40,15,.35)';
+  for (let k = 0; k < 9; k++) { x.beginPath(); x.arc(-w * .16 + k * w * .04, -h * (.03 + (k % 3) * .022), 1.4, 0, 6.283); x.fill(); }
+  x.restore();
+}
+function layout() {
+  DPR = Math.min(2, window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight;
+  sizeCanvas(bg, bctx, W, H); sizeCanvas(fx, fctx, W, H);
+  sky = Array.from({ length: Math.round(W * H / 2600) }, () => ({ x: rnd(0, W), y: rnd(0, H), r: rnd(.4, 2), sp: rnd(4, 20), tw: rnd(.8, 2.6), ph: rnd(0, 6.3), c: Math.random() < .2 ? '#fff1c9' : '#ffffff' }));
+  const head = document.querySelector('header').getBoundingClientRect().height, foot = document.querySelector('footer').getBoundingClientRect().height;
+  const avail = H - head - foot - 120;
+  JW = Math.floor(clamp(Math.min(W * .78, avail / 1.33), 150, 360)); JH = Math.floor(JW * 1.33);
+  jar.style.width = JW + 'px'; jar.style.height = JH + 'px'; sizeCanvas(jar, jctx, JW, JH);
+  if (!slots.length) slots = genSlots(state.deck.length);
+  makeSprites();
+}
+
+/* ---------- partículas (encima de todo) ---------- */
+let parts = [];
+function confetti(x, y, n, colors) {
+  for (let i = 0; i < n; i++) {
+    const a = rnd(0, 6.28), sp = rnd(120, 380);
+    parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 180, g: 520, life: rnd(1.2, 2.2), age: 0, rot: rnd(0, 6), vr: rnd(-8, 8),
+      k: i % 3 === 0 ? 'star' : 'rect', c: colors[i % colors.length], s: rnd(4, 8) });
+  }
+}
+function drawFx(dt) {
+  fctx.clearRect(0, 0, W, H);
+  parts = parts.filter(p => (p.age += dt) < p.life);
+  for (const p of parts) {
+    p.vy += p.g * dt; p.vx *= .99; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+    fctx.globalAlpha = Math.min(1, (p.life - p.age) / .4); fctx.fillStyle = p.c;
+    fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.rot);
+    if (p.k === 'star') { drawStar(fctx, null, 0, 0, p.s, 0, .45); fctx.fill(); } else fctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+    fctx.restore();
+  }
+  fctx.globalAlpha = 1;
+}
+
+/* ---------- interfaz ---------- */
+const veil = $('veil'), sheet = $('sheet'), hint = $('hint');
+function updateUI() {
+  const r = remaining();
+  $('count').innerHTML = r > 0 ? `Quedan <b>${r}</b> estrellas en el frasco` : 'El frasco está vacío';
+  $('walletBtn').textContent = `🎟 Mis cupones (${state.coupons.length})`;
+}
+let pendingCoupon = -1;
+function closeSheet() { if (pendingCoupon >= 0 && !state.coupons.includes(pendingCoupon)) { state.coupons.push(pendingCoupon); save(); updateUI(); } pendingCoupon = -1; veil.hidden = true; sheet.innerHTML = ''; }
+function starSVG(c) {
+  let pts = []; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, r = i % 2 ? 4.6 : 9.5; pts.push((Math.cos(a) * r).toFixed(2) + ',' + (Math.sin(a) * r).toFixed(2)); }
+  return `<svg viewBox="-13 -13 26 26" width="56" height="56"><polygon points="${pts.join(' ')}" fill="${c}" stroke="${c}" stroke-width="3.4" stroke-linejoin="round"/></svg>`;
+}
+let busy = false, opened = 0;
+function openJar() {
+  audio();
+  if (busy || !veil.hidden) return;
+  if (remaining() <= 0) { showEnd(); return; }
+  busy = true; lidT0 = clock; chime([76, 79, 84], .09);
+  const idx = remaining() - 1, id = state.deck[state.pos], s = slots[idx], p = slotXY(idx), jr = jar.getBoundingClientRect();
+  state.pos++; save(); updateUI();
+  const isCoupon = id[0] === 'c', el = document.createElement('div');
+  el.className = 'fly'; el.innerHTML = starSVG(isCoupon ? '#ffcf3a' : s.c);
+  const sx = jr.left + p.x, sy = jr.top + p.y, ex = W / 2, ey = H * .45;
+  el.style.left = sx + 'px'; el.style.top = sy + 'px'; document.body.appendChild(el);
+  const midX = jr.left + JW / 2, midY = jr.top + JH * .02;
+  const anim = el.animate([
+    { transform: 'translate(0,0) scale(.5) rotate(0deg)', opacity: 1 },
+    { transform: `translate(${midX - sx}px,${midY - sy}px) scale(.9) rotate(200deg)`, opacity: 1, offset: .45 },
+    { transform: `translate(${ex - sx}px,${ey - sy}px) scale(3.2) rotate(560deg)`, opacity: 1, offset: .9 },
+    { transform: `translate(${ex - sx}px,${ey - sy}px) scale(4) rotate(600deg)`, opacity: 0 }
+  ], { duration: REDUCE ? 400 : 1300, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
+  const done = () => { el.remove(); busy = false; opened++; showItem(id); hint.textContent = remaining() > 0 ? 'Toca el frasco otra vez ✨' : 'Ya no quedan estrellas…'; };
+  anim.onfinish = done;
+}
+function showItem(id) {
+  const i = +id.slice(1);
+  if (id[0] === 'r') {
+    sheet.innerHTML = `<div class="card">
+      <div class="kick">Razón #${i + 1} por la que te amo</div>
+      <p class="reason">${RAZONES[i]}</p>
+      <p class="sign">— ${EL}</p>
+      <button class="btn" type="button" data-close>Otra estrella ✨</button></div>`;
+    confetti(W / 2, H * .4, 26, ['#ff8fb1', '#ffd36b', '#ffffff', '#b8a4ff']);
+    chime([84, 88, 91], .07);
+  } else {
+    const owned = state.coupons.includes(i);
+    sheet.innerHTML = `<div class="card">
+      <div class="kick">¡Encontraste un cupón de amor! 🎟</div>
+      <div class="ticket">
+        <div class="t-head">Cupón para ${ELLA}</div>
+        <div class="t-body"><p class="t-text">${CUPONES[i]}</p>${owned ? '' : '<canvas class="scratch"></canvas>'}</div>
+        <div class="t-foot">Válido para siempre · firmado: ${EL}</div>
+      </div>
+      <p class="small" id="cmsg">${owned ? 'Este ya lo tenías guardado 😉' : 'Raspa el cupón con el dedo para descubrir tu premio.'}</p>
+      <button class="link" type="button" id="reveal" hidden>¿No puedes raspar? Toca aquí</button>
+      <button class="btn" type="button" data-close>Seguir ✨</button></div>`;
+    chime([79, 83, 86, 91], .06);
+    if (!owned) { pendingCoupon = i; requestAnimationFrame(() => setupScratch(sheet.querySelector('.scratch'), () => claim(i))); }
+  }
+  veil.hidden = false;
+}
+function claim(i) {
+  if (!state.coupons.includes(i)) state.coupons.push(i);
+  save(); updateUI();
+  const m = $('cmsg'); if (m) m.textContent = 'Guardado en "Mis cupones". Tómale captura y cóbramelo cuando quieras 😉';
+  const r = $('reveal'); if (r) r.hidden = true;
+  confetti(W / 2, H * .42, 60, ['#ffd36b', '#ffb23f', '#ff8fb1', '#ffffff', '#8fd3ff']);
+  chime([72, 76, 79, 84, 88, 91], .07);
+}
+function setupScratch(c, onReveal) {
+  if (!c) return;
+  const box = c.parentElement.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1), w = box.width, h = box.height;
+  c.width = Math.round(w * d); c.height = Math.round(h * d);
+  const x = c.getContext('2d'); x.scale(d, d);
+  const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#b9b9cc'); g.addColorStop(.45, '#eeeef6'); g.addColorStop(.55, '#d9d9e6'); g.addColorStop(1, '#a6a6bc');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(255,255,255,${rnd(.3, .9)})`; drawStar(x, null, rnd(0, w), rnd(0, h), rnd(1.5, 4), rnd(0, 6), .45); x.fill(); }
+  x.fillStyle = '#5d5d78'; x.font = '700 18px Quicksand, system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('✨ Raspa aquí ✨', w / 2, h / 2);
+  x.globalCompositeOperation = 'destination-out'; x.lineCap = 'round'; x.lineJoin = 'round'; x.lineWidth = 42;
+  let down = false, lx = 0, ly = 0, moves = 0, done = false;
+  const pt = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  const reveal = () => { if (done) return; done = true; c.style.opacity = '0'; setTimeout(() => c.remove(), 700); onReveal(); };
+  const check = () => {
+    const data = x.getImageData(0, 0, c.width, c.height).data; let clear = 0, tot = 0;
+    for (let i = 3; i < data.length; i += 4 * 24) { tot++; if (data[i] < 40) clear++; }
+    if (clear / tot > .5) reveal();
+  };
+  c.addEventListener('pointerdown', e => { e.preventDefault(); down = true; c.setPointerCapture && c.setPointerCapture(e.pointerId); [lx, ly] = pt(e); x.beginPath(); x.arc(lx, ly, 21, 0, 6.283); x.fill(); });
+  c.addEventListener('pointermove', e => {
+    if (!down || done) return; const [px, py] = pt(e);
+    x.beginPath(); x.moveTo(lx, ly); x.lineTo(px, py); x.stroke(); lx = px; ly = py;
+    if (++moves % 6 === 0) check();
+    if (moves % 10 === 0 && Math.random() < .5) { const r = c.getBoundingClientRect(); parts.push({ x: r.left + px, y: r.top + py, vx: rnd(-60, 60), vy: rnd(-120, -40), g: 300, life: .7, age: 0, rot: 0, vr: 4, k: 'star', c: '#ffffff', s: 3 }); }
+  });
+  const up = () => { if (down) { down = false; check(); } };
+  c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+  setTimeout(() => { const b = $('reveal'); if (b && !done) { b.hidden = false; b.onclick = reveal; } }, 9000);
+}
+function showEnd() {
+  sheet.innerHTML = `<div class="card">
+    <div class="kick">¡Abriste todas las estrellas!</div>
+    <p class="reason">Se vació el frasco, pero el amor no se acaba. Te amo millones, ${ELLA}.</p>
+    <p class="sign">— ${EL}</p>
+    <button class="btn" type="button" id="refill">Llenar el frasco otra vez ✨</button></div>`;
+  veil.hidden = false;
+  $('refill').onclick = () => { state.deck = newDeck(); state.pos = 0; save(); updateUI(); closeSheet(); hint.textContent = 'Toca el frasco para sacar una estrella ✨'; confetti(W / 2, H * .5, 50, COLORS); };
+}
+function showWallet() {
+  audio();
+  const list = state.coupons.slice().sort((a, b) => a - b).map(i => `<div class="mini"><span>Cupón para ${ELLA}</span>${CUPONES[i]}</div>`).join('');
+  sheet.innerHTML = `<div class="wallet">
+    <h2>Mis cupones</h2>
+    <p class="small">${state.coupons.length ? 'Tómales captura y cóbramelos cuando quieras.' : ''}</p>
+    ${list || `<div class="empty">Todavía no tienes cupones. Hay ${CUPONES.length} escondidos entre las estrellas del frasco.</div>`}
+    <button class="btn" type="button" data-close>Volver al frasco</button></div>`;
+  veil.hidden = false;
+}
+jar.addEventListener('click', openJar);
+jar.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openJar(); } });
+jar.tabIndex = 0;
+$('walletBtn').addEventListener('click', showWallet);
+veil.addEventListener('click', e => { if (e.target.closest('[data-close]') || (e.target === veil && pendingCoupon < 0)) closeSheet(); });
+
+/* ---------- bucle ---------- */
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(.1, (now - last) / 1000); last = now; clock += dt;
+  try { drawSky(clock, dt); drawJar(clock); drawFx(dt); } catch (err) { if (window.console) console.error(err); }
+}
+window.addEventListener('resize', layout);
+layout(); updateUI(); requestAnimationFrame(frame);
+if (document.fonts) document.fonts.ready.then(() => { layout(); }).catch(() => {});
+window.__frasco = { state: () => state };
+})();
+</script>
+</body>
+</html>

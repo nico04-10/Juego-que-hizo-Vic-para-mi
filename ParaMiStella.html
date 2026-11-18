@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070b24">
+<title>Para Mi Stella</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&family=Quicksand:wght@500;600&display=swap">
+<style>
+/* Layout: cielo de estrellas a pantalla completa (canvas); nombre al centro que sube al presionar; ramo abajo; notas flotantes al centro */
+:root{
+  --sky:#070b24; --ink:#fff7ea; --dim:#cfc3e6; --gold:#ffd36b; --gold-deep:#ffb23f; --rose:#ff8fb1;
+  --card:rgba(20,15,48,.88); --line:rgba(255,211,107,.5);
+  --f-title:"Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --f-script:"Great Vibes", "Segoe Script", "Brush Script MT", cursive;
+  --f-ui:"Quicksand", "Segoe UI", system-ui, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0; height:100%; overflow:hidden; background:var(--sky); color:var(--ink); font-family:var(--f-ui);
+  -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none}
+canvas{position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:manipulation}
+
+.title-wrap{position:fixed; left:0; right:0; top:50%; transform:translateY(-64%); text-align:center; padding-inline:16px;
+  z-index:2; pointer-events:none; transform-origin:50% 0;
+  transition:top 1.7s cubic-bezier(.2,.8,.2,1), transform 1.7s cubic-bezier(.2,.8,.2,1)}
+body.played .title-wrap{top:calc(env(safe-area-inset-top,0px) + 2.2vh); transform:translateY(0) scale(.56)}
+.name{margin:0; font-family:var(--f-title); font-weight:600; font-size:clamp(62px,18vw,150px); line-height:1;
+  letter-spacing:.14em; padding-left:.14em; filter:drop-shadow(0 0 22px rgba(255,196,90,.38))}
+.name span{display:inline-block; color:transparent; -webkit-background-clip:text; background-clip:text;
+  background-image:linear-gradient(100deg,#fff1c4 0%,var(--gold) 28%,#ffffff 44%,var(--gold-deep) 60%,#fff1c4 100%);
+  background-size:260% 100%; animation:rise 1.2s cubic-bezier(.2,.8,.2,1) both, shimmer 6s linear infinite}
+@keyframes rise{from{opacity:0; transform:translateY(26px) scale(.9)} to{opacity:1; transform:none}}
+@keyframes shimmer{from{background-position:0% 0} to{background-position:-260% 0}}
+.sub{margin:.05em 0 0; font-family:var(--f-script); font-weight:400; font-size:clamp(36px,10.5vw,66px); color:var(--rose);
+  text-shadow:0 0 18px rgba(255,143,177,.5); opacity:0; animation:fade 1.6s ease 1.3s forwards}
+@keyframes fade{to{opacity:1}}
+
+.btn{position:fixed; left:50%; top:calc(50% + clamp(92px,16vh,170px)); transform:translateX(-50%); z-index:3;
+  font-family:var(--f-ui); font-weight:600; font-size:17px; letter-spacing:.22em; text-transform:uppercase; color:#2b1a04;
+  background:linear-gradient(180deg,#ffe7a3,var(--gold-deep)); border:0; border-radius:999px; padding:16px 40px 15px 44px; cursor:pointer;
+  box-shadow:0 10px 30px rgba(255,178,63,.35); opacity:0; animation:fade 1s ease 2.3s forwards, pulse 2.4s ease-in-out 3.3s infinite}
+.btn:focus-visible,.snd:focus-visible{outline:3px solid #fff; outline-offset:4px}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,211,107,.55),0 10px 30px rgba(255,178,63,.35)}
+  70%{box-shadow:0 0 0 24px rgba(255,211,107,0),0 10px 30px rgba(255,178,63,.35)}
+  100%{box-shadow:0 0 0 0 rgba(255,211,107,0),0 10px 30px rgba(255,178,63,.35)}}
+.btn.gone{animation:none; opacity:0; transform:translateX(-50%) scale(.6); transition:opacity .5s, transform .5s; pointer-events:none}
+
+.hint{position:fixed; left:0; right:0; z-index:2; text-align:center; padding-inline:16px; pointer-events:none;
+  font-size:15px; letter-spacing:.04em; color:var(--dim); opacity:0; transition:opacity 1.2s}
+.hint.on{opacity:1}
+
+.note{position:fixed; left:50%; top:46%; transform:translate(-50%,-50%); z-index:5; width:min(calc(100vw - 32px),380px); max-height:72vh; overflow:auto;
+  background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px 22px 14px; text-align:center; cursor:pointer;
+  box-shadow:0 22px 60px rgba(0,0,0,.55),0 0 50px rgba(255,211,107,.14); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px)}
+.note.show{animation:pop .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{from{opacity:0; transform:translate(-50%,-44%) scale(.7)} to{opacity:1; transform:translate(-50%,-50%) scale(1)}}
+.note-kind{font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--gold)}
+.note h2{margin:.35em 0 .2em; font-family:var(--f-script); font-weight:400; font-size:38px; color:var(--rose); line-height:1.1}
+.note p{margin:.5em 0 0; font-family:var(--f-title); font-size:23px; line-height:1.45; white-space:pre-line; text-wrap:pretty}
+.note p.phrase{font-style:italic; font-size:25px}
+.note-close{margin-top:14px; font-size:12px; letter-spacing:.08em; color:var(--dim); opacity:.8}
+
+.snd{position:fixed; top:calc(env(safe-area-inset-top,0px) + 12px); right:14px; z-index:6; width:44px; height:44px; border-radius:50%;
+  border:1px solid var(--line); background:rgba(20,15,48,.6); color:var(--gold); font-size:19px; cursor:pointer; line-height:1}
+.snd.off{color:var(--dim); opacity:.7; text-decoration:line-through}
+@media (prefers-reduced-motion: reduce){ .name span{animation:rise 1s ease both} .btn{animation:fade 1s ease 1.5s forwards} }
+</style>
+</head>
+<body>
+<canvas id="sky" aria-label="Cielo de estrellas con un ramo de girasoles, gatitos y perritos"></canvas>
+
+<div class="title-wrap" id="title">
+  <h1 class="name" id="name" aria-label="Nicole"></h1>
+  <p class="sub">para Mi Stella</p>
+</div>
+<button class="btn" id="go" type="button">Presiona</button>
+<div class="hint" id="hint">Toca a los gatitos y perritos ✨</div>
+<button class="snd" id="snd" type="button" aria-label="Sonido" hidden>♪</button>
+
+<div class="note" id="note" role="dialog" aria-live="polite" hidden>
+  <div class="note-kind" id="nkind"></div>
+  <h2 id="ntitle"></h2>
+  <p id="ntext"></p>
+  <div class="note-close">toca para cerrar</div>
+</div>
+
+<script>
+(() => {
+/* ============================================================
+   PERSONALIZA AQUÍ
+   ============================================================ */
+const NOMBRE = 'NICOLE';
+const APODOS = ['Nicole', 'Mi Stella', 'Stella mia', 'mi estrella', 'Nicole', 'Mi Stella'];
+const FRASES = [
+  '{n}, de todas las estrellas del cielo, yo elegí la única que brilla de verdad.',
+  'Te amo más de lo que hay estrellas, {n}.',
+  'Mi lugar favorito del universo es a tu lado, {n}.',
+  '{n}, eres mi girasol: siempre busco tu luz.',
+  'Si alguna vez me pierdo, solo tengo que mirarte, {n}.',
+  'Contigo hasta los días nublados tienen sol, {n}.',
+  'Te elegiría en esta vida y en todas las demás, {n}.',
+  '{n}, tu risa es mi canción favorita.',
+  'Cada día contigo es mi mejor día, {n}.',
+  'Volvimos más fuertes, {n}. Y esta vez es para siempre.',
+  'Eres la casualidad más bonita que me ha pasado, {n}.',
+  '{n}, te amo millones. Y un poquito más.',
+  'Gracias por quedarte, {n}. Por elegirme otra vez.',
+  'Mi corazón ya se sabe tu nombre de memoria, {n}.',
+  'No le pido deseos a las estrellas, {n}: ya te tengo a ti.',
+  'Eres mi paz en medio de todo el ruido, {n}.',
+  '{n}, hasta los gatitos saben que eres lo más bonito del mundo.',
+  'Los perritos me dijeron un secreto, {n}: que te amo muchísimo.',
+  'Tú no eres una estrella cualquiera, {n}. Eres la mía.',
+  'Si el cielo se apagara, {n}, igual me alumbrarías tú.'
+];
+const POEMAS = [
+  { t: 'Stella mia', v: 'Hay millones de estrellas\ncolgadas sobre el mar,\npero solo una en el mundo\nme enseñó a brillar.' },
+  { t: 'Constelación', v: 'Si uniera con un hilo\nlas estrellas una a una,\ndibujaría tu nombre\nentre el sol y la luna.' },
+  { t: 'Deseo', v: 'Vi pasar una estrella fugaz\ny no supe qué pedir,\nporque todo lo que quiero\nya me sonríe al dormir.' },
+  { t: 'Navegante', v: 'Los marineros de antes\nse guiaban por el cielo.\nYo me guío por tus ojos,\nmi estrella, mi norte, mi anhelo.' },
+  { t: 'Polvo de estrellas', v: 'Dicen que somos polvo de estrellas,\ny te creo, Nicole:\nnadie hecho de otra cosa\npodría brillar como tú.' },
+  { t: 'Noche larga', v: 'Cuando la noche es muy larga\ny no sé por dónde ir,\nlevanto la vista y te busco,\nStella mia, y vuelvo a sonreír.' },
+  { t: 'Millones', v: 'Una noche conté estrellas\npara saber cuánto te amo.\nLlegué a un millón y me rendí:\nme faltaba cielo, no amor.' },
+  { t: 'Tormenta', v: 'Las estrellas no se apagan\ncuando el cielo se nubla:\nsiguen ahí, esperando.\nAsí te quise en la tormenta,\nasí te quiero en la calma.' }
+];
+
+/* ---------- utilidades ---------- */
+const $ = s => document.getElementById(s);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = p => 1 - Math.pow(1 - clamp(p, 0, 1), 3);
+const easeBack = p => { p = clamp(p, 0, 1); const c = 1.9; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function bag(arr) { let b = []; return () => { if (!b.length) b = shuffle(arr.slice()); return b.pop(); }; }
+
+/* ---------- título ---------- */
+[...NOMBRE].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.style.animationDelay = (i * .12) + 's, 0s'; $('name').appendChild(s); });
+
+/* ---------- canvas ---------- */
+const cv = $('sky'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, S = 0, CX = 0, BASE = 0, ASIZE = 80;
+let stars = [], nebula = null, shooting = [], nextShoot = 1.2;
+const LAYERS = [
+  { dens: .0004, sp: 6, r: [.4, 1.05] },
+  { dens: .00016, sp: 15, r: [.8, 1.6] },
+  { dens: .00005, sp: 30, r: [1.3, 2.3], cross: true }
+];
+const STAR_COLS = ['#ffffff', '#ffffff', '#fff1c9', '#d7e4ff'];
+function initStars() {
+  stars = LAYERS.map(L => Array.from({ length: Math.round(W * H * L.dens) + 8 }, () => ({
+    x: rnd(0, W), y: rnd(0, H), r: rnd(L.r[0], L.r[1]), ph: rnd(0, 6.28), tw: rnd(.8, 2.6), c: STAR_COLS[Math.floor(rnd(0, 4))]
+  })));
+  nebula = document.createElement('canvas'); nebula.width = Math.ceil(W / 2); nebula.height = Math.ceil(H / 2);
+  const n = nebula.getContext('2d');
+  [[.2, .25, .55, 'rgba(155,80,190,.22)'], [.85, .15, .5, 'rgba(70,90,210,.22)'], [.7, .7, .6, 'rgba(230,110,160,.16)'], [.15, .8, .5, 'rgba(90,60,180,.18)']]
+    .forEach(([x, y, r, c]) => { const g = n.createRadialGradient(x * nebula.width, y * nebula.height, 0, x * nebula.width, y * nebula.height, r * Math.max(nebula.width, nebula.height)); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)'); n.fillStyle = g; n.fillRect(0, 0, nebula.width, nebula.height); });
+}
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  S = Math.min(W * .36, H * .3); CX = W / 2; BASE = H * .97; ASIZE = clamp(Math.min(W, H) * .21, 72, 125);
+  headCache.clear(); initStars(); placeHint();
+  animals.forEach(a => { a.s = laneScale(a.lane); });
+}
+
+/* ---------- formas ---------- */
+function heart(x, y, s, col) {
+  ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y + s * .35);
+  ctx.bezierCurveTo(x - s, y - s * .3, x - s * .5, y - s * 1.05, x, y - s * .45);
+  ctx.bezierCurveTo(x + s * .5, y - s * 1.05, x + s, y - s * .3, x, y + s * .35); ctx.fill();
+}
+function star(x, y, r, rot, col) {
+  ctx.fillStyle = col; ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * .45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fill();
+}
+function ell(x, y, rx, ry, rot, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2); ctx.fill(); }
+
+/* ---------- cielo ---------- */
+let warpT = -99;
+function drawSky(t, dt) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#050820'); g.addColorStop(.55, '#11113a'); g.addColorStop(1, '#2a1a4a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1; ctx.drawImage(nebula, Math.sin(t * .05) * 20 - 20, Math.cos(t * .04) * 14 - 14, W + 40, H + 28);
+  const since = t - warpT;
+  const warp = REDUCE ? 1 : 1 + 13 * Math.exp(-since * 1.7) * Math.min(1, since * 5);
+  const slow = REDUCE ? .35 : 1;
+  LAYERS.forEach((L, li) => {
+    const v = L.sp * warp * slow;
+    for (const s of stars[li]) {
+      s.x -= v * dt;
+      if (s.x < -30) { s.x += W + 60; s.y = rnd(0, H); }
+      const a = .5 + .5 * Math.sin(t * s.tw + s.ph);
+      ctx.globalAlpha = .35 + .65 * a;
+      if (warp > 2) {
+        ctx.strokeStyle = s.c; ctx.lineWidth = s.r; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + v * .07, s.y); ctx.stroke();
+      } else {
+        ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill();
+        if (L.cross && a > .6) { ctx.globalAlpha = (a - .6) * 1.6; ctx.fillRect(s.x - s.r * 4, s.y - .5, s.r * 8, 1); ctx.fillRect(s.x - .5, s.y - s.r * 4, 1, s.r * 8); }
+      }
+    }
+  });
+  ctx.globalAlpha = 1;
+  // estrellas fugaces
+  nextShoot -= dt;
+  if (nextShoot <= 0) {
+    nextShoot = rnd(1.6, 4.2);
+    const ang = rnd(.35, .6), sp = rnd(520, 820);
+    shooting.push({ x: rnd(W * .35, W + 60), y: rnd(-30, H * .35), vx: -Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: rnd(.8, 1.3), age: 0 });
+  }
+  shooting = shooting.filter(s => (s.age += dt) < s.life);
+  for (const s of shooting) {
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    const a = Math.sin(Math.PI * s.age / s.life), len = .16;
+    const gr = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * len, s.y - s.vy * len);
+    gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.strokeStyle = gr; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * len, s.y - s.vy * len); ctx.stroke();
+    ctx.globalAlpha = a; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, 2.2, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+  }
+}
+
+/* ---------- ramo de girasoles ---------- */
+const HEADS = [[0, -1.98, .27], [-.44, -1.8, .23], [.44, -1.8, .23], [-.2, -1.55, .22], [.24, -1.52, .215], [-.63, -1.46, .185], [.63, -1.47, .185]];
+const DRAW_ORDER = HEADS.map((h, i) => i).sort((a, b) => HEADS[a][1] - HEADS[b][1]);
+const LEAVES = [[-.3, -1.12, -2.35, .4], [.32, -1.16, -.78, .4], [-.5, -1.3, -2.7, .32], [.52, -1.28, -.45, .32], [-.08, -1.25, -1.9, .3]];
+const BREATH = Array.from({ length: 46 }, () => ({ x: rnd(-.72, .72), y: rnd(-2.15, -1.2), r: rnd(1.2, 2.6), d: rnd(0, .8) }));
+const headCache = new Map();
+function headImg(rpx) {
+  const key = Math.round(rpx); if (headCache.has(key)) return headCache.get(key);
+  const size = Math.ceil(rpx * 2.5 * DPR), c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'), m = size / 2, r = rpx * DPR;
+  const petals = (n, dist, rx, ry, off, c1, c2) => {
+    for (let i = 0; i < n; i++) {
+      const a = off + i * Math.PI * 2 / n;
+      x.save(); x.translate(m + Math.cos(a) * dist, m + Math.sin(a) * dist); x.rotate(a);
+      const g = x.createLinearGradient(-rx, 0, rx, 0); g.addColorStop(0, c2); g.addColorStop(.6, c1); g.addColorStop(1, c2);
+      x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); x.fill(); x.restore();
+    }
+  };
+  petals(22, r * .66, r * .46, r * .14, 0, '#ffc629', '#e98f00');
+  petals(20, r * .6, r * .42, r * .13, .15, '#ffdb4d', '#f4a800');
+  const g = x.createRadialGradient(m - r * .1, m - r * .1, 0, m, m, r * .44);
+  g.addColorStop(0, '#7a4516'); g.addColorStop(1, '#3a1d08');
+  x.fillStyle = g; x.beginPath(); x.arc(m, m, r * .44, 0, Math.PI * 2); x.fill();
+  const N = 110;
+  for (let i = 0; i < N; i++) {
+    const rr = r * .41 * Math.sqrt((i + .5) / N), a = i * 2.39996;
+    x.fillStyle = i % 3 ? '#2a1405' : '#9a6224'; x.beginPath(); x.arc(m + Math.cos(a) * rr, m + Math.sin(a) * rr, Math.max(.8, r * .024), 0, Math.PI * 2); x.fill();
+  }
+  headCache.set(key, c); return c;
+}
+function leaf(x, y, len, ang, sc) {
+  if (sc <= 0) return;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(sc, sc);
+  ctx.fillStyle = '#4f9a3c'; ctx.beginPath(); ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(len * .5, -len * .32, len, 0); ctx.quadraticCurveTo(len * .5, len * .32, 0, 0); ctx.fill();
+  ctx.strokeStyle = '#3a7a2c'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len * .92, 0); ctx.stroke();
+  ctx.restore();
+}
+let playT = -1;
+function drawBouquet(t) {
+  const tb = t - playT; if (playT < 0 || tb < 0) return;
+  const px = CX, py = BASE - S * .34;
+  // halo
+  const glowA = ease((tb - 2.4) / 1.5) * (.16 + .05 * Math.sin(t * 1.6));
+  if (glowA > 0) {
+    const gg = ctx.createRadialGradient(CX, BASE - S * 1.6, 0, CX, BASE - S * 1.6, S * 1.7);
+    gg.addColorStop(0, `rgba(255,205,100,${glowA})`); gg.addColorStop(1, 'rgba(255,205,100,0)');
+    ctx.fillStyle = gg; ctx.fillRect(CX - S * 1.8, BASE - S * 3.4, S * 3.6, S * 3.6);
+  }
+  const pa = ease((tb - .3) / .9);
+  if (pa <= 0) return;
+  ctx.save(); ctx.globalAlpha = pa; ctx.translate(px, py); ctx.scale(.85 + .15 * pa, .85 + .15 * pa); ctx.translate(-px, -py);
+  // papel de atrás (rosa, borde en zigzag)
+  const top = BASE - S * 1.32;
+  let g = ctx.createLinearGradient(0, top, 0, py); g.addColorStop(0, '#f7b8c8'); g.addColorStop(1, '#d9728f');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(px - S * .09, py + S * .02);
+  for (let i = 0; i <= 10; i++) { const x = px - S * .74 + i * S * .148; ctx.lineTo(x, top + (i % 2 ? S * .07 : 0) + Math.abs(i - 5) * S * .035); }
+  ctx.lineTo(px + S * .09, py + S * .02); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // tallos
+  const stemP = i => ease((tb - .6 - i * .12) / 1.2);
+  ctx.strokeStyle = '#3f8a37'; ctx.lineCap = 'round';
+  const heads = HEADS.map(([dx, dy, rr], i) => {
+    const sway = tb > 3 ? Math.sin(t * 1.1 + i * 1.7) * .03 : 0;
+    const hx0 = px + dx * S, hy0 = BASE + dy * S, cs = Math.cos(sway), sn = Math.sin(sway);
+    return { i, x: px + (hx0 - px) * cs - (hy0 - py) * sn, y: py + (hx0 - px) * sn + (hy0 - py) * cs, r: rr * S };
+  });
+  ctx.lineWidth = Math.max(2, S * .032);
+  for (const h of heads) {
+    const p = stemP(h.i); if (p <= 0) continue;
+    const c1x = px + (h.x - px) * .15, c1y = (py + h.y) / 2;
+    ctx.beginPath(); ctx.moveTo(px, py);
+    for (let k = 1; k <= 14; k++) { const u = p * k / 14, a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u; ctx.lineTo(a * px + b * c1x + c * h.x, a * py + b * c1y + c * h.y); }
+    ctx.stroke();
+  }
+  // hojas
+  LEAVES.forEach(([dx, dy, ang, len], i) => leaf(px + dx * S * .55, BASE + dy * S, len * S, ang, ease((tb - 1.3 - i * .1) / .7)));
+  // flores de relleno
+  for (const b of BREATH) {
+    const a = ease((tb - 2.7 - b.d) / .5); if (a <= 0) continue;
+    ctx.globalAlpha = a * .9; ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.arc(px + b.x * S, BASE + b.y * S, b.r * a, 0, 6.283); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // girasoles
+  for (const idx of DRAW_ORDER) {
+    const h = heads[idx], bl = easeBack((tb - 1.6 - idx * .18) / .9);
+    if (bl <= 0) continue;
+    const img = headImg(h.r), sz = img.width / DPR;
+    ctx.save(); ctx.translate(h.x, h.y); ctx.rotate((1 - bl) * -1.2 + Math.sin(t * .6 + idx) * .04); ctx.scale(bl, bl);
+    ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz); ctx.restore();
+  }
+  // tallos bajo el nudo
+  ctx.save(); ctx.globalAlpha = pa; ctx.lineWidth = Math.max(2, S * .03);
+  for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(px + k * S * .015, py); ctx.lineTo(px + k * S * .045, BASE - S * .02); ctx.stroke(); }
+  // papel de adelante (crema)
+  const ft = BASE - S * .98;
+  g = ctx.createLinearGradient(px - S * .6, 0, px + S * .6, 0); g.addColorStop(0, '#f1d9bf'); g.addColorStop(.5, '#fff3e3'); g.addColorStop(1, '#e8c9a8');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(px - S * .64, ft);
+  ctx.quadraticCurveTo(px, ft + S * .2, px + S * .64, ft); ctx.lineTo(px + S * .1, py + S * .04); ctx.lineTo(px - S * .1, py + S * .04); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(160,110,70,.28)'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(px - S * .3, ft + S * .09); ctx.lineTo(px - S * .04, py); ctx.moveTo(px + S * .28, ft + S * .09); ctx.lineTo(px + S * .05, py); ctx.stroke();
+  ctx.restore();
+  // moño
+  const bw = easeBack((tb - 3.1) / .7);
+  if (bw > 0) {
+    ctx.save(); ctx.translate(px, py + S * .02); ctx.scale(bw, bw);
+    ell(-S * .13, 0, S * .13, S * .07, -.35, '#e4476a'); ell(S * .13, 0, S * .13, S * .07, .35, '#e4476a');
+    ell(-S * .12, -S * .005, S * .06, S * .03, -.35, '#b8304f'); ell(S * .12, -S * .005, S * .06, S * .03, .35, '#b8304f');
+    ctx.fillStyle = '#e4476a';
+    ctx.beginPath(); ctx.moveTo(-S * .02, 0); ctx.lineTo(-S * .12, S * .2); ctx.lineTo(-S * .06, S * .18); ctx.lineTo(S * .0, S * .02); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(S * .02, 0); ctx.lineTo(S * .12, S * .2); ctx.lineTo(S * .06, S * .18); ctx.lineTo(S * .0, S * .02); ctx.fill();
+    ell(0, 0, S * .045, S * .04, 0, '#c93a5a');
+    ctx.restore();
+  }
+  // brillitos alrededor del ramo
+  if (tb > 3.4 && Math.random() < .12) P({ k: 'star', x: CX + rnd(-S * .8, S * .8), y: BASE - S * rnd(1.3, 2.3), vx: rnd(-6, 6), vy: rnd(-22, -10), g: 0, life: rnd(1.2, 2), size: rnd(2, 4), c: Math.random() < .5 ? '#ffe39a' : '#ffffff' });
+}
+
+/* ---------- gatitos y perritos ---------- */
+const CAT_COLS = [
+  { base: '#f2a65a', light: '#fde2c4', dark: '#d17f33', ear: '#ffb3c1', stripes: true, eye: '#2b1a10' },
+  { base: '#a3a7b9', light: '#e8e9f1', dark: '#7c8196', ear: '#ffb3c1', stripes: true, eye: '#1d2030' },
+  { base: '#2e2c3a', light: '#4a4760', dark: '#1d1b26', ear: '#e58aa0', eye: '#f7d44c', glow: true },
+  { base: '#fbf4ea', light: '#ffffff', dark: '#e0cdb6', ear: '#ffb3c1', patch: '#f2a65a', eye: '#2b1a10' }
+];
+const DOG_COLS = [
+  { base: '#dcaa62', light: '#f7e3bf', dark: '#a8763a', eye: '#2b1a10' },
+  { base: '#8b5a3c', light: '#d8b08c', dark: '#5e3a24', eye: '#1a0f08' },
+  { base: '#f6f0e6', light: '#ffffff', dark: '#7a5236', patch: '#8b5a3c', eye: '#1a0f08' },
+  { base: '#2f2a2a', light: '#c98c55', dark: '#1d1818', eye: '#1a0f08' }
+];
+let animals = [];
+const laneFloor = l => l === 0 ? BASE - S * 1.05 : BASE - S * .16;
+const laneScale = l => (l === 0 ? .8 : 1) * ASIZE / 110;
+function spawnAnimal(lane, first) {
+  const dir = Math.random() < .5 ? 1 : -1, kind = Math.random() < .5 ? 'cat' : 'dog';
+  const col = kind === 'cat' ? CAT_COLS[Math.floor(rnd(0, 4))] : DOG_COLS[Math.floor(rnd(0, 4))];
+  const s = laneScale(lane), m = 70 * s;
+  const off = first ? rnd(-10, W * .2) : rnd(0, W * .12);
+  return { kind, col, lane, dir, s, x: dir > 0 ? -m - off : W + m + off, speed: rnd(34, 52) * (lane === 0 ? .8 : 1), ph: rnd(0, 6), hop: 0, happy: 0 };
+}
+function drawLegs(a, sw, ys, col, w, xs) {
+  xs.forEach((lx, k) => {
+    const back = k % 2 === 0;
+    ctx.save(); ctx.translate(lx, ys); ctx.rotate(Math.sin(a.ph + (back ? 0 : Math.PI)) * sw);
+    ctx.fillStyle = back ? col.dark : col.base; ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-w / 2, 0, w, 20, w / 2); else ctx.rect(-w / 2, 0, w, 20);
+    ctx.fill(); ctx.restore();
+  });
+}
+function eyes(a, x1, x2, y, col) {
+  if (a.happy > 0) {
+    ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    [x1, x2].forEach(x => { ctx.beginPath(); ctx.arc(x, y + 1, 3.6, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); });
+  } else {
+    [x1, x2].forEach(x => { ell(x, y, 3.3, 4, 0, col.eye); ell(x + 1, y - 1.5, 1.2, 1.2, 0, '#ffffff'); });
+  }
+}
+function drawCat(a, t) {
+  const c = a.col;
+  // cola
+  ctx.strokeStyle = c.base; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-30, -34); ctx.quadraticCurveTo(-52, -40, -50 + Math.sin(t * 3 + a.ph) * 6, -72); ctx.stroke();
+  drawLegs(a, .45, -20, c, 7, [-22, -12, 16, 26]);
+  ell(0, -30, 34, 17, 0, c.base);
+  ell(4, -24, 20, 8, 0, c.light);
+  if (c.stripes) { ctx.strokeStyle = c.dark; ctx.lineWidth = 3; [-14, -4, 6].forEach(x => { ctx.beginPath(); ctx.moveTo(x, -46); ctx.quadraticCurveTo(x + 3, -38, x, -32); ctx.stroke(); }); }
+  if (c.patch) ell(-12, -34, 11, 9, .3, c.patch);
+  // cabeza
+  ctx.fillStyle = c.base;
+  ctx.beginPath(); ctx.moveTo(20, -60); ctx.lineTo(23, -82); ctx.lineTo(34, -67); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(38, -67); ctx.lineTo(49, -82); ctx.lineTo(52, -60); ctx.fill();
+  ctx.fillStyle = c.ear;
+  ctx.beginPath(); ctx.moveTo(24, -64); ctx.lineTo(25, -76); ctx.lineTo(31, -67); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(41, -67); ctx.lineTo(47, -76); ctx.lineTo(48, -63); ctx.fill();
+  ell(36, -52, 20, 18, 0, c.base);
+  if (c.patch) ell(28, -60, 8, 7, 0, c.patch);
+  ell(38, -45, 9, 6, 0, c.light);
+  eyes(a, 30, 43, -54, c);
+  ell(26, -45, 4, 2.5, 0, 'rgba(255,120,150,.45)'); ell(48, -45, 4, 2.5, 0, 'rgba(255,120,150,.45)');
+  ctx.fillStyle = '#ff8aa5'; ctx.beginPath(); ctx.moveTo(35, -48); ctx.lineTo(41, -48); ctx.lineTo(38, -45); ctx.fill();
+  ctx.strokeStyle = '#3a2418'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.arc(36.3, -44, 1.8, 0, Math.PI); ctx.arc(39.7, -44, 1.8, 0, Math.PI); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .9;
+  ctx.beginPath(); ctx.moveTo(46, -46); ctx.lineTo(60, -48); ctx.moveTo(46, -44); ctx.lineTo(60, -42); ctx.moveTo(30, -46); ctx.lineTo(16, -48); ctx.moveTo(30, -44); ctx.lineTo(16, -42); ctx.stroke();
+}
+function drawDog(a, t) {
+  const c = a.col;
+  ctx.strokeStyle = c.base; ctx.lineWidth = 8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-32, -38); ctx.lineTo(-46, -56 + Math.sin(t * 14 + a.ph) * 7); ctx.stroke();
+  drawLegs(a, .4, -22, c, 9, [-24, -13, 16, 27]);
+  ell(0, -33, 37, 19, 0, c.base);
+  ell(4, -25, 22, 9, 0, c.light);
+  if (c.patch) ell(-10, -38, 12, 9, 0, c.patch);
+  ell(40, -66, 7, 11, -.5, c.dark);
+  ell(36, -54, 20, 19, 0, c.base);
+  ell(51, -46, 12, 9, 0, c.light);
+  ell(60, -49, 4.5, 3.5, 0, '#1a1210');
+  ell(21, -50, 7.5, 14, .35, c.dark);
+  eyes(a, 32, 44, -58, c);
+  ell(28, -48, 4, 2.5, 0, 'rgba(255,120,150,.4)');
+  ctx.strokeStyle = '#3a2418'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(52, -42, 3.5, .1, Math.PI - .1); ctx.stroke();
+  if (a.happy > 0 || Math.sin(t * .7 + a.ph) > .4) ell(53, -37, 3.5, 5, 0, '#ff7f9a');
+  ctx.strokeStyle = '#e4476a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(22, -39); ctx.lineTo(30, -35); ctx.stroke();
+  ell(29, -32, 2.6, 2.6, 0, '#ffd36b');
+}
+function drawAnimal(a, t) {
+  const hopY = a.hop > 0 ? -Math.sin(Math.PI * (1 - a.hop / .6)) * 26 * a.s : 0;
+  const bob = -Math.abs(Math.sin(a.ph)) * 2 * a.s;
+  const y = laneFloor(a.lane);
+  ctx.save();
+  ctx.globalAlpha = .25; ell(a.x, y, 36 * a.s, 4 * a.s, 0, '#000'); ctx.globalAlpha = 1;
+  ctx.translate(a.x, y + hopY + bob); ctx.scale(a.s * a.dir, a.s);
+  if (a.lane === 0) ctx.filter = 'brightness(.88)';
+  a.kind === 'cat' ? drawCat(a, t) : drawDog(a, t);
+  ctx.restore();
+}
+function updAnimals(dt) {
+  animals.forEach((a, i) => {
+    const m = 80 * a.s;
+    a.x += a.dir * a.speed * dt * (a.happy > 0 ? .25 : 1); a.ph += dt * a.speed * .13 * (a.happy > 0 ? .3 : 1);
+    if (a.hop > 0) a.hop = Math.max(0, a.hop - dt);
+    if (a.happy > 0) a.happy -= dt;
+    if ((a.dir > 0 && a.x > W + m) || (a.dir < 0 && a.x < -m)) animals[i] = spawnAnimal(a.lane, false);
+  });
+}
+function hitAnimal(px, py) {
+  const order = animals.slice().sort((a, b) => b.lane - a.lane);
+  for (const a of order) {
+    const lx = (px - a.x) / a.s * a.dir, ly = (py - laneFloor(a.lane)) / a.s;
+    if (lx > -62 && lx < 68 && ly > -95 && ly < 8) return a;
+  }
+  return null;
+}
+
+/* ---------- partículas ---------- */
+let parts = [];
+function P(o) { parts.push(Object.assign({ vx: 0, vy: 0, g: 0, age: 0, rot: rnd(0, 6), vr: rnd(-2, 2) }, o)); }
+function burst(x, y) {
+  for (let i = 0; i < 16; i++) {
+    const a = rnd(0, 6.28), sp = rnd(50, 140);
+    P({ k: i % 3 ? 'heart' : 'star', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, g: 90, life: rnd(1, 1.6), size: rnd(5, 9),
+      c: ['#ff6f9c', '#ff9ec0', '#ffd36b', '#ffffff'][i % 4] });
+  }
+}
+function drawParts(dt) {
+  parts = parts.filter(p => (p.age += dt) < p.life);
+  for (const p of parts) {
+    p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+    ctx.globalAlpha = Math.min(1, (p.life - p.age) / .5);
+    if (p.k === 'heart') heart(p.x, p.y, p.size, p.c); else star(p.x, p.y, p.size, p.rot, p.c);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- notas de amor ---------- */
+const nextFrase = bag(FRASES), nextPoema = bag(POEMAS), nextApodo = bag(APODOS);
+const note = $('note'), nkind = $('nkind'), ntitle = $('ntitle'), ntext = $('ntext');
+let lastWasPoem = false;
+function showNote() {
+  const poem = lastWasPoem ? Math.random() < .25 : Math.random() < .45;
+  lastWasPoem = poem;
+  if (poem) {
+    const p = nextPoema(); nkind.textContent = '★ un poema para ti ★'; ntitle.textContent = p.t; ntitle.hidden = false;
+    ntext.textContent = p.v; ntext.className = '';
+  } else {
+    let f = nextFrase(), n = nextApodo();
+    if (f.startsWith('{n}')) n = n.charAt(0).toUpperCase() + n.slice(1);
+    nkind.textContent = '♥'; ntitle.hidden = true; ntext.textContent = f.replace('{n}', n); ntext.className = 'phrase';
+  }
+  note.hidden = false; note.classList.remove('show'); void note.offsetWidth; note.classList.add('show'); note.scrollTop = 0;
+}
+note.addEventListener('click', () => { note.hidden = true; });
+
+/* ---------- música suave ---------- */
+const AU = { ctx: null, out: null, on: true, step: 0 };
+const PENT = [72, 74, 76, 79, 81, 84, 86, 88];
+const CHORDS = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59]];
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function note_(f, t, dur, vol, type) {
+  const o = AU.ctx.createOscillator(), g = AU.ctx.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(.6, dur * .2)); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
+  o.connect(g); g.connect(AU.out); o.start(t); o.stop(t + dur + .05);
+}
+function startAudio() {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  if (AU.ctx) { if (AU.ctx.state !== 'running') AU.ctx.resume().catch(() => {}); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  try { AU.ctx = new AC(); } catch (e) { return; }
+  const c = AU.ctx; AU.out = c.createGain(); AU.out.gain.value = AU.on ? .55 : 0; AU.out.connect(c.destination);
+  const d = c.createDelay(); d.delayTime.value = .36; const fb = c.createGain(); fb.gain.value = .33; const wet = c.createGain(); wet.gain.value = .35;
+  AU.out.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(c.destination);
+  setInterval(() => {
+    if (!AU.on || c.state !== 'running') return;
+    const t = c.currentTime + .05, st = AU.step++;
+    if (st % 8 === 0) CHORDS[(st / 8) % 4].forEach(m => note_(mtof(m), t, 4.2, .045, 'sine'));
+    if (Math.random() < .68) note_(mtof(PENT[Math.floor(rnd(0, PENT.length))]), t, 1.6, .055, Math.random() < .5 ? 'sine' : 'triangle');
+  }, 520);
+}
+function chime() {
+  if (!AU.ctx || !AU.on) return;
+  const t = AU.ctx.currentTime + .02; [84, 88, 91, 96].forEach((m, i) => note_(mtof(m), t + i * .07, .9, .06, 'triangle'));
+}
+const snd = $('snd');
+snd.addEventListener('click', () => { AU.on = !AU.on; if (AU.out) AU.out.gain.value = AU.on ? .55 : 0; snd.classList.toggle('off', !AU.on); });
+['touchend', 'click'].forEach(ev => document.addEventListener(ev, () => { if (AU.ctx && AU.ctx.state !== 'running') AU.ctx.resume().catch(() => {}); }, { passive: true }));
+
+/* ---------- inicio ---------- */
+let clock = 0, played = false;
+const hint = $('hint');
+function placeHint() { if (!played) return; const r = $('title').getBoundingClientRect(); hint.style.top = Math.round(r.bottom + 6) + 'px'; }
+$('go').addEventListener('click', () => {
+  if (played) return; played = true; startAudio(); chime();
+  document.body.classList.add('played'); $('go').classList.add('gone'); snd.hidden = false;
+  playT = clock + .5; warpT = clock;
+  setTimeout(() => { placeHint(); hint.classList.add('on'); }, 3800);
+  setTimeout(() => { animals = [spawnAnimal(1, true), spawnAnimal(1, true), spawnAnimal(1, true), spawnAnimal(0, true), spawnAnimal(0, true)]; }, 1000);
+});
+cv.addEventListener('pointerdown', e => {
+  if (!played) return;
+  const a = hitAnimal(e.clientX, e.clientY);
+  if (a) {
+    a.hop = .6; a.happy = 2.2; chime();
+    burst(a.x + a.dir * 38 * a.s, laneFloor(a.lane) - 60 * a.s);
+    showNote(); hint.classList.remove('on');
+  } else {
+    if (!note.hidden) note.hidden = true;
+    for (let i = 0; i < 6; i++) P({ k: 'star', x: e.clientX, y: e.clientY, vx: rnd(-60, 60), vy: rnd(-80, -20), g: 60, life: rnd(.6, 1), size: rnd(2.5, 4.5), c: '#ffe39a' });
+  }
+});
+window.__stella = { animals: () => animals.map(a => ({ x: a.x, y: laneFloor(a.lane) - 45 * a.s, lane: a.lane })) };
+
+/* ---------- bucle ---------- */
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(.1, (now - last) / 1000); last = now; clock += dt;
+  try {
+    drawSky(clock, dt);
+    if (played) { updAnimals(dt); animals.slice().sort((a, b) => a.lane - b.lane).forEach(a => drawAnimal(a, clock)); drawBouquet(clock); }
+    drawParts(dt);
+  } catch (err) { if (window.console) console.error(err); }
+}
+window.addEventListener('resize', resize);
+resize(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
